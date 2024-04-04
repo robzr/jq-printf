@@ -21,6 +21,13 @@ def __printf_pad($width; $arg; $char):
   ;
 
 def __printf($format):
+  if type == "null" then
+    []
+  elif type | IN("number", "string") then
+    [.]
+  else
+    .
+  end |
   reduce .[] as $arg (
     { history: [], format: $format, result: "" };
     . + {
