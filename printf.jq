@@ -1,5 +1,15 @@
 module {
-  homepage: "https://github.com/robzr/jq-printf",
+  "name": "printf",
+  "description": "jq module implementing printf function",
+  "homepage": "https://github.com/robzr/jq-printf",
+  "license": "MIT",
+  "author": "Rob Zwissler",
+  "version": "0.0.0",
+  "jq": "1.6",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robzr/jq-printf.git"
+  }
 };
 
 def __printf_regex:
