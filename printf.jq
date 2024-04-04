@@ -46,6 +46,13 @@ def __printf($format):
     } |
     . + {
       format: .format[(.token.ends // .format | length):],
+      pad_character: (
+        if (.token.flags? // "" | contains("0")) then
+          "0"
+        else
+          " "
+        end
+      ),
       result: (.result + .format[0:.token.begins]),
     } |
     . + {
@@ -87,9 +94,9 @@ def __printf($format):
           end |
           # now take care of left/right pad and the string .arg
           if .token.width and (.token.flags // "" | contains("-")) then
-            .arg + __printf_pad(.token.width; .arg; " ")
+            .arg + __printf_pad(.token.width; .arg; .pad_character)
           elif .token.width then
-            __printf_pad(.token.width; .arg; " ") + .arg
+            __printf_pad(.token.width; .arg; .pad_character) + .arg
           else
             .arg
           end
