@@ -13,7 +13,7 @@ module {
 };
 
 def __printf_regex:
-  "%(?<flags>[-+0%]+)?(?<width>[1-9][0-9]*)?(.(?<precision>[0-9]*))?(?<type>[%dfs])"
+  "%(?<flags>[-+0]+)?(?<width>[1-9][0-9]*)?(.(?<precision>[0-9]*))?(?<type>[dfs])"
   ;
 
 def __printf_pad($width; $arg; $char):
@@ -58,8 +58,8 @@ def __printf($format):
     . + {
       result: (
         .result + (
-          # first we convert non-strings into formatted strings
-          if .token.type == "d" then
+          # first convert non-strings into formatted strings
+          if .token.type | IN("d", "i") then
             if (.token.flags // "" | contains("+")) and .arg >= 0 then
               . + { arg: "+\(.arg | round | tostring)" }
             else
@@ -90,15 +90,19 @@ def __printf($format):
               .
             end
           else
-            .
+            . + { arg: (.arg | tostring) }
           end |
           # now take care of left/right pad and the string .arg
-          if .token.width and (.token.flags // "" | contains("-")) then
-            .arg + __printf_pad(.token.width; .arg; .pad_character)
-          elif .token.width then
-            __printf_pad(.token.width; .arg; .pad_character) + .arg
+          if .token.type? then
+            if .token.width and (.token.flags // "" | contains("-")) then
+              .arg + __printf_pad(.token.width; .arg; .pad_character)
+            elif .token.width then
+              __printf_pad(.token.width; .arg; .pad_character) + .arg
+            else
+              .arg
+            end
           else
-            .arg
+            ""
           end
         )
       ),
