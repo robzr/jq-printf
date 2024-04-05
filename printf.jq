@@ -70,7 +70,10 @@ def __printf($format):
         (
           .format |
           capture(__printf_regex) // {} |
-          . + { width: (.width? // 0 | tonumber) }
+          . + { 
+             flags: (.flags? // ""),
+             width: (.width? // 0 | tonumber),
+          }
         ) +
         (
           .format |
@@ -86,7 +89,7 @@ def __printf($format):
       format: .format[(.token.ends // .format | length):],
       number: (
         .number +
-        if (.token.flags? // "") | contains("+") then
+        if .token.flags | contains("+") then
           { sign: (.sign? // "+") }
         elif .numbers.sign != "+" then
           { sign: null }
@@ -100,7 +103,7 @@ def __printf($format):
       result: (
         .result + (
           if .token.type | IN("d", "i") then
-            __printf_pad(.token.width; .arg; .token.flags // ""; .number.sign)
+            __printf_pad(.token.width; .arg; .token.flags; .number.sign)
           elif .token.type == "f" then
             if (.token.precision? and .token.precision == "0") then
               . + { arg: ($arg | tonumber | round | tostring) }
@@ -123,9 +126,9 @@ def __printf($format):
             else
               .
             end |
-            __printf_pad(.token.width; .arg; .token.flags // ""; .number.sign)
+            __printf_pad(.token.width; .arg; .token.flags; .number.sign)
           elif .token.type == "s" then
-            __printf_pad(.token.width; .arg | tostring; .token.flags // ""; .number.sign)
+            __printf_pad(.token.width; .arg | tostring; .token.flags; .number.sign)
           else
             ""
           end
