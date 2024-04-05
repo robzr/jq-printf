@@ -5,9 +5,11 @@ jq module implementing printf function
 The `printf/1` function is used by passing the format string as a function
 argument, with inputs interpreted as format values.
 ```
-import "printf";
-
-["bird", 123.456] | printf("%-6s is the word the number is %1.2f")
+$ jq -n '
+include "printf";
+["bird", 5.55] | printf("%-6s is the word the number is %+05.1f")
+'
+"bird   is the word the number is +05.6"
 ```
 This printf implementation is written to be forgiving of input types, and accept
 null, string, list, number and object inputs. If a format value does not match a
@@ -17,13 +19,13 @@ integer lengths or sign/unsigned types), some handling has been built into the
 implementation.
 
 A subset of standard printf format types and modifiers are currently supported,
-although the framework is in place to easily add more.
+and the framework is in place to easily add more.
 
 ### Flags
 As in `%<flag><type>` (ex: `%+f`):
 - `-` left adjustment within the field width
-- `+` when specified with a `%d` or `%f`, will force adding the sign of the value
-- `0` zero padding used to fill out remaining field width, when specified
+- `+` force adding sign when used with `%d`, `%i` or `%f`
+- `0` zero padding used to fill out remaining field width
 
 ### Field Width
 As in `%<field_width><type>` (ex: `%10s`) specifies minimum field width, which
@@ -44,7 +46,7 @@ The following types are supported:
 
 ## Debugging
 To debug, change your `printf` function call to `__printf`. The `.history` list
-of objects shows the state of parsing and formatting at each step.
+of objects will show the state of parsing and formatting at each pass.
 
 ## License
 `printf` is released under the MIT license.
