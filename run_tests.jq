@@ -42,7 +42,7 @@ include "printf"; printf("%-5s")
 #
 include "printf"; printf("%d")
 "a"
-# error (no output)
+"a"
 
 include "printf"; printf("%d")
 1
@@ -86,6 +86,10 @@ include "printf"; printf("%f")
 include "printf"; printf("%+f")
 12.345
 "+12.345"
+
+include "printf"; printf("%-+6.1f")
+12.345
+"+12.3 "
 
 include "printf"; printf("%5.1f")
 12.345

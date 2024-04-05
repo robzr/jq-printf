@@ -16,20 +16,36 @@ def __printf_regex:
   "%(?<flags>[-+0]+)?(?<width>[1-9][0-9]*)?(.(?<precision>[0-9]*))?(?<type>[dfs])"
   ;
 
-def __printf_pad($width; $arg; $char):
-  $char * (($width | tonumber) - ($arg | length))
-  ;
-
-def __printf_add_pad($width; $arg; $char; $flags): 
-  __printf_pad($width // 0; $arg; $char) as $pad |
-  if $width then
-    if $flags | contains("-") then
-      $arg + $pad
-    elif $width then
-      $pad + $arg
+def __printf_pad($width; $arg; $flags; $sign):
+  (
+    if (.token.flags? // "" | contains("0")) then
+      "0"
+    else
+      " "
     end
+  ) as $char |
+  ($arg | tostring) as $arg_string |
+  ($sign // "") as $sign_string |
+  (
+    if $sign then
+      .token.width - 1
+    else
+      .token.width
+     end
+  ) as $adjusted_width |
+  (
+    (
+      $char * (
+        ($adjusted_width | tonumber) - ($arg_string | length)
+      )
+    )? // ""
+  ) as $pad |
+  if $flags | contains("-") then
+    $sign_string + $arg_string + $pad
+  elif $flags | contains("0") then
+    $sign_string + $pad + $arg_string
   else
-    $arg
+    $pad + $sign_string + $arg_string
   end
   ;
 
@@ -51,7 +67,11 @@ def __printf($format):
         capture("^(?<sign>[-+])?(?<head>[0-9]*)(\\.(?<tail>[0-9]*))?") // {}
       ),
       token: (
-        (.format | capture(__printf_regex) // {}) + 
+        (
+          .format |
+          capture(__printf_regex) // {} |
+          . + { width: (.width? // 0 | tonumber) }
+        ) +
         (
           .format |
           match(__printf_regex) // {} |
@@ -61,12 +81,11 @@ def __printf($format):
           }
         )
       )
-
     } |
     . + {
       format: .format[(.token.ends // .format | length):],
       number: (
-        .number + 
+        .number +
         if (.token.flags? // "") | contains("+") then
           { sign: (.sign? // "+") }
         elif .numbers.sign != "+" then
@@ -75,32 +94,14 @@ def __printf($format):
           {}
         end
       ),
-      pad_character: (
-        if (.token.flags? // "" | contains("0")) then
-          "0"
-        else
-          " "
-        end
-      ),
       result: (.result + .format[0:.token.begins]),
     } |
     . + {
       result: (
         .result + (
           if .token.type | IN("d", "i") then
-            if (.token.flags // "" | contains("+")) and .arg >= 0 then
-              . + { arg: "+\(.arg | round | tostring)" }
-            else
-              . + { arg: (.arg | round | tostring) }
-            end |
-            __printf_add_pad(.token.width; .arg; .pad_character; .token.flags // "")
+            __printf_pad(.token.width; .arg; .token.flags // ""; .number.sign)
           elif .token.type == "f" then
-            if (.token.flags // "" | contains("+")) and .arg >= 0 then
-              . + { arg: "+\(.arg | tostring)" }
-            else
-              . + { arg: (.arg | tostring) }
-            end |
-
             if (.token.precision? and .token.precision == "0") then
               . + { arg: ($arg | tonumber | round | tostring) }
             elif .token.precision? then
@@ -109,9 +110,12 @@ def __printf($format):
                   (.token.precision | tonumber) as $precision |
                   .number.head + "." + (
                     if (.number.tail | length) > $precision then
-                      "\(.number.tail[0:$precision]).\(.number.tail[$precision:])" | tonumber | round | tostring
+                      "\(.number.tail[0:$precision]).\(.number.tail[$precision:])" |
+                      tonumber |
+                      round |
+                      tostring
                     else
-                      .number.tail + __printf_pad($precision; .number.tail; "0")
+                      __printf_pad($precision; .number.tail; ""; "")
                     end
                   )
                 )
@@ -119,11 +123,11 @@ def __printf($format):
             else
               .
             end |
-            __printf_add_pad(.token.width; .arg; .pad_character; .token.flags // "")
+            __printf_pad(.token.width; .arg; .token.flags // ""; .number.sign)
           elif .token.type == "s" then
-            __printf_add_pad(.token.width; .arg | tostring; .pad_character; .token.flags // "")
+            __printf_pad(.token.width; .arg | tostring; .token.flags // ""; .number.sign)
           else
-            . + { arg: (.arg | tostring) }
+            ""
           end
         )
       ),
