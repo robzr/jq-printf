@@ -1,5 +1,14 @@
 #!/usr/bin/env jq --run-tests
 
+# test format/value count mismatches
+include "printf"; printf("%s %s")
+["a"]
+"a %s"
+
+include "printf"; printf("%s")
+["a", "b"]
+"a"
+
 # test input transforms
 #
 include "printf"; printf("%s")
@@ -79,6 +88,10 @@ include "printf"; printf("%+03d")
 
 # test floats
 #
+include "printf"; printf("%f")
+"a"
+"a"
+
 include "printf"; printf("%f")
 12.345
 "12.345"
