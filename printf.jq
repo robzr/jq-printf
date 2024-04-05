@@ -4,7 +4,7 @@ module {
   "homepage": "https://github.com/robzr/jq-printf",
   "license": "MIT",
   "author": "Rob Zwissler",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "jq": "1.6",
   "repository": {
     "type": "git",
@@ -13,63 +13,62 @@ module {
 };
 
 def __printf_regex:
-  "(?<!%)%(?<flags>[-+0]+)?(?<width>[1-9][0-9]*)?(\\.(?<precision>[0-9]*))?(?<type>[dfs])"
+  "(?<!%)%(?<flags>[-+0]+)?(?<width>[1-9][0-9]*)?(\\.(?<precision>[0-9]*))?(?<type>[dfis])"
   ;
 
 def __printf_pad($width; $arg; $flags; $sign):
   (
-    if (.token.flags? // "" | contains("0")) then
+    if $flags | contains("0") then
       "0"
     else
       " "
     end
-  ) as $char |
-  ($arg | tostring) as $arg_string |
-  ($sign // "") as $sign_string |
+  ) as $pad_char |
   (
-    if $sign then
-      .token.width - 1
+    if ($flags | contains("+")) and $sign == "+" then
+      $sign
     else
-      .token.width
-     end
-  ) as $adjusted_width |
+      ""
+    end
+  ) as $sign_string |
   (
     (
-      $char * (
-        ($adjusted_width | tonumber) - ($arg_string | length)
+      $pad_char * (
+        ($width | tonumber) -
+        ($sign_string | length) -
+        ($arg | length)
       )
     )? // ""
   ) as $pad |
   if $flags | contains("-") then
-    $sign_string + $arg_string + $pad
+    $sign_string + $arg + $pad
   elif $flags | contains("0") then
-    $sign_string + $pad + $arg_string
+    $sign_string + $pad + $arg
   else
-    $pad + $sign_string + $arg_string
+    $pad + $sign_string + $arg
   end
   ;
 
 def __printf($format):
-  (if type == "null" then
+  if type == "null" then
     []
   elif type | IN("number", "string") then
     [.]
   else
     .
-  end) as $args |
-  $args |
+  end |
   reduce .[] as $arg (
     { history: [], format: $format, result: "" };
+    .arg = ($arg | tostring) |
     . + {
-      arg: $arg,
       number: (
-        $arg |
-        tostring |
-        capture("^(?<sign>[-+])?(?<head>[0-9]*)(\\.(?<tail>[0-9]*))?") // {}
+        .arg |
+        capture("^(?<sign>[-+])?(?<head>[0-9]*)(\\.(?<tail>[0-9]*))?") // {} |
+        . + { sign: (.sign // "+") }
       ),
       token: (
+        .format |
         (
-          .format |
           capture(__printf_regex) // {} |
           . + { 
              flags: (.flags? // ""),
@@ -77,7 +76,6 @@ def __printf($format):
           }
         ) +
         (
-          .format |
           match(__printf_regex) // {} |
           {
             begins: .offset,
@@ -88,26 +86,17 @@ def __printf($format):
     } |
     . + {
       format: .format[(.token.ends // .format | length):],
-      number: (
-        .number +
-        if .token.flags | contains("+") then
-          { sign: (.sign? // "+") }
-        elif .numbers.sign != "+" then
-          { sign: null }
-        else
-          {}
-        end
-      ),
       result: (.result + (.format[0:.token.begins] | gsub("%%"; "%"))),
     } |
     . + {
       result: (
-        .result + (
-          if .token.type | IN("d", "i") then
+        .result + 
+        (
+          if .token.type | IN("d", "i", "s") then
             __printf_pad(.token.width; .arg; .token.flags; .number.sign)
           elif .token.type == "f" then
             if (.token.precision? and .token.precision == "0") then
-              . + { arg: ($arg | tonumber | round | tostring) }
+              . + { arg: (.arg | tonumber | round | tostring) }
             elif .token.precision? then
               . + {
                 arg: (
@@ -128,13 +117,11 @@ def __printf($format):
               .
             end |
             __printf_pad(.token.width; .arg; .token.flags; .number.sign)
-          elif .token.type == "s" then
-            __printf_pad(.token.width; .arg | tostring; .token.flags; .number.sign)
           else
             ""
           end
         )
-      ),
+      )
     } |
     . + { history: (.history + [. | del(.history)]) }
   )
