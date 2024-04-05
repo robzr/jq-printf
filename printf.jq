@@ -4,7 +4,7 @@ module {
   "homepage": "https://github.com/robzr/jq-printf",
   "license": "MIT",
   "author": "Rob Zwissler",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "jq": "1.6",
   "repository": {
     "type": "git",
