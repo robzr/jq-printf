@@ -4,7 +4,7 @@ module {
   "homepage": "https://github.com/robzr/jq-printf",
   "license": "MIT",
   "author": "Rob Zwissler",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "jq": "1.6",
   "repository": {
     "type": "git",
@@ -84,46 +84,41 @@ def __printf($format):
         )
       )
     } |
+    .result += (.format[0:.token.begins] | gsub("%%"; "%")) |
     . + {
       format: .format[(.token.ends // .format | length):],
-      result: (.result + (.format[0:.token.begins] | gsub("%%"; "%"))),
     } |
-    . + {
-      result: (
-        .result + 
-        (
-          if .token.type | IN("d", "i", "s") then
-            __printf_pad(.token.width; .arg; .token.flags; .number.sign)
-          elif .token.type == "f" then
-            if (.token.precision? and .token.precision == "0") then
-              . + { arg: (.arg | tonumber | round | tostring) }
-            elif .token.precision? then
-              . + {
-                arg: (
-                  (.token.precision | tonumber) as $precision |
-                  .number.head + "." + (
-                    if (.number.tail | length) > $precision then
-                      "\(.number.tail[0:$precision]).\(.number.tail[$precision:])" |
-                      tonumber |
-                      round |
-                      tostring
-                    else
-                      __printf_pad($precision; .number.tail; ""; "")
-                    end
-                  )
-                )
-              }
-            else
-              .
-            end |
-            __printf_pad(.token.width; .arg; .token.flags; .number.sign)
-          else
-            ""
-          end
-        )
-      )
-    } |
-    . + { history: (.history + [. | del(.history)]) }
+    .result += (
+      if .token.type == "f" and .token.precision? then
+        if .token.precision == "0" then
+          .arg |= (tonumber | round | tostring)
+        else
+          . + {
+            arg: (
+              (.token.precision | tonumber) as $precision |
+              .number.head + "." + (
+                if (.number.tail | length) > $precision then
+                  "\(.number.tail[0:$precision]).\(.number.tail[$precision:])" |
+                  tonumber |
+                  round |
+                  tostring
+                else
+                  __printf_pad($precision; .number.tail; ""; "")
+                end
+              )
+            )
+          }
+        end
+      else
+        .
+      end |
+      if .token.type | IN("d", "f", "i", "s") then
+        __printf_pad(.token.width; .arg; .token.flags; .number.sign)
+      else
+        ""
+      end
+    ) |
+    .history += [del(.history)]
   )
   ;
 
