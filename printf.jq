@@ -13,7 +13,7 @@ module {
 };
 
 def __printf_regex:
-  "%(?<flags>[-+0]+)?(?<width>[1-9][0-9]*)?(.(?<precision>[0-9]*))?(?<type>[dfs])"
+  "(?<!%)%(?<flags>[-+0]+)?(?<width>[1-9][0-9]*)?(\\.(?<precision>[0-9]*))?(?<type>[dfs])"
   ;
 
 def __printf_pad($width; $arg; $flags; $sign):
@@ -50,13 +50,14 @@ def __printf_pad($width; $arg; $flags; $sign):
   ;
 
 def __printf($format):
-  if type == "null" then
+  (if type == "null" then
     []
   elif type | IN("number", "string") then
     [.]
   else
     .
-  end |
+  end) as $args |
+  $args |
   reduce .[] as $arg (
     { history: [], format: $format, result: "" };
     . + {
@@ -97,7 +98,7 @@ def __printf($format):
           {}
         end
       ),
-      result: (.result + .format[0:.token.begins]),
+      result: (.result + (.format[0:.token.begins] | gsub("%%"; "%"))),
     } |
     . + {
       result: (

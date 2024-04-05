@@ -9,6 +9,13 @@ include "printf"; printf("%s")
 ["a", "b"]
 "a"
 
+
+# test escaped %
+include "printf"; printf("%%s")
+["a"]
+"%s"
+
+
 # test input transforms
 #
 include "printf"; printf("%s")
