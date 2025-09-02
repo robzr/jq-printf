@@ -98,12 +98,15 @@ def __printf($format):
               (.token.precision | tonumber) as $precision |
               .number.head + "." + (
                 if (.number.tail | length) > $precision then
-                  "\(.number.tail[0:$precision]).\(.number.tail[$precision:])" |
-                  tonumber |
-                  round |
-                  tostring
+                  (
+                    ((.number.head + "." + .number.tail) | tonumber) as $full_num |
+                    ($full_num * (pow(10; $precision)) | round) / pow(10; $precision) |
+                    tostring |
+                    split(".")[1] // ""
+                  ) as $rounded_tail |
+                  $rounded_tail + ("0" * ($precision - ($rounded_tail | length)))
                 else
-                  __printf_pad($precision; .number.tail; ""; "")
+                  .number.tail + ("0" * ($precision - (.number.tail | length)))
                 end
               )
             )
