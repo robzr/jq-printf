@@ -134,3 +134,7 @@ include "printf"; printf("%3.2f")
 include "printf"; printf("%6.2f")
 12.345
 " 12.35"
+
+include "printf"; printf("%0.2f")
+1.023
+"1.02"
